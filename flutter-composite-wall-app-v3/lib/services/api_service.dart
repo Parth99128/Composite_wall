@@ -6,7 +6,7 @@ import '../models/models.dart';
 //   const String kBackendBaseUrl = 'http://192.168.X.X:3000';
 // Production (after deploying to Railway/Render):
 //   const String kBackendBaseUrl = 'https://your-app.up.railway.app';
-const String kBackendBaseUrl = 'http://localhost:3000';
+const String kBackendBaseUrl = 'https://compositewall-production.up.railway.app/';
 
 final _dio = Dio(BaseOptions(
   baseUrl: kBackendBaseUrl,
