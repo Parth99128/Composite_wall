@@ -33,9 +33,6 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Recreate Android project (Fix Gradle issue)
-        run: rm -rf android && flutter create --platforms=android .
-
       - name: Build APK
         run: flutter build apk --release
 
