@@ -71,8 +71,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     String? insight;
 
     if (_isOnline) {
-      insight = await ApiService.getAiInsightViaBackend(prompt);
-    }
+        insight = await ApiService.getAiInsight(prompt);
 
     // Fallback to built-in heuristic insight
     insight ??= _buildHeuristicInsight(_result!);
