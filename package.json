@@ -1,0 +1,12 @@
+{
+  "name": "composite-wall-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "postinstall": "cd composite-wall-backend-v3 && npm install",
+    "start": "cd composite-wall-backend-v3 && npm start"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
