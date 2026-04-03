@@ -100,3 +100,4 @@ lib/
 - **Animations**: flutter_animate — fade, slide, shimmer loading states
 - **Charts**: fl_chart for temperature profile visualization
 
+ 
