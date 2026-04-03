@@ -99,3 +99,4 @@ lib/
 - **Accent**: Thermal orange `#FF6B35` (primary), Cyan `#00D4FF` (AI)
 - **Animations**: flutter_animate — fade, slide, shimmer loading states
 - **Charts**: fl_chart for temperature profile visualization
+
