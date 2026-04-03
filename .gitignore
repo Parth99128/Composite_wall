@@ -1,0 +1,27 @@
+# Node modules
+node_modules/
+package-lock.json
+npm-debug.log*
+
+# Environment variables
+.env.local
+.env.*.local
+
+# Flutter
+build/
+.dart_tool/
+.flutter-plugins*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+dist/
+*.tgz
