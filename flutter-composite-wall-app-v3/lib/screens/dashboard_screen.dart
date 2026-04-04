@@ -29,11 +29,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
+    _loadMaterials();
     _runAnalysis();
+  }
+
+  Future<void> _loadMaterials() async {
+    try {
+      final mats = await ApiService.getMaterials();
+      if (mounted && mats.isNotEmpty) {
+        setState(() => _materials = mats);
+      }
+    } catch (_) {
+      // Use default materials
+    }
   }
 
   Future<void> _runAnalysis() async {
     setState(() { _loading = true; _statusMsg = null; });
+
+    // Always reload materials from backend to reflect deletions/additions
+    await _loadMaterials();
 
     // Try API
     final online = await ApiService.isBackendReachable();
