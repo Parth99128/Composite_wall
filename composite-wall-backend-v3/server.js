@@ -75,13 +75,13 @@ function computeWall(materials, bc) {
 }
 
 // ─── Google Gemini Helpers ────────────────────────────────────────
-const SYSTEM_CONTEXT = `You are a senior thermal engineering expert for Pentas Insulations Pvt Ltd, an Indian insulation manufacturer. You specialize in composite wall thermal analysis, CFD, and insulation materials. Be concise, technical, and practical. Use metric units. No markdown.`;
+const SYSTEM_CONTEXT = `You are a thermal engineering expert. Be concise, technical, and practical. Use metric units. Max 150 words. No markdown.`;
 
-async function callGemini(userMessage, maxTokens = 512) {
+async function callGemini(userMessage, maxTokens = 256) {
   if (!GEMINI_API_KEY) throw new Error('GEMINI_API_KEY not configured. Get free key at https://aistudio.google.com/app/apikey');
   const res = await axios.post(GEMINI_URL(), {
     contents: [{ role: 'user', parts: [{ text: SYSTEM_CONTEXT + '\n\n' + userMessage }] }],
-    generationConfig: { maxOutputTokens: maxTokens, temperature: 0.4, topP: 0.9 },
+    generationConfig: { maxOutputTokens: maxTokens, temperature: 0.3, topP: 0.9 },
     safetySettings: [
       { category: 'HARM_CATEGORY_HARASSMENT',        threshold: 'BLOCK_NONE' },
       { category: 'HARM_CATEGORY_HATE_SPEECH',       threshold: 'BLOCK_NONE' },
@@ -94,17 +94,17 @@ async function callGemini(userMessage, maxTokens = 512) {
   return text.trim();
 }
 
-async function callGeminiChat(history, newMessage, maxTokens = 400) {
+async function callGeminiChat(history, newMessage, maxTokens = 256) {
   if (!GEMINI_API_KEY) throw new Error('GEMINI_API_KEY not configured');
   const contents = [
     { role: 'user',  parts: [{ text: SYSTEM_CONTEXT }] },
-    { role: 'model', parts: [{ text: 'Understood. I am your thermal engineering expert for Pentas Insulations.' }] },
+    { role: 'model', parts: [{ text: 'Understood. Ready to help with thermal engineering questions.' }] },
     ...history.map(m => ({ role: m.isUser ? 'user' : 'model', parts: [{ text: m.text }] })),
     { role: 'user', parts: [{ text: newMessage }] },
   ];
   const res = await axios.post(GEMINI_URL(), {
     contents,
-    generationConfig: { maxOutputTokens: maxTokens, temperature: 0.5 },
+    generationConfig: { maxOutputTokens: maxTokens, temperature: 0.3 },
   }, { headers: { 'Content-Type': 'application/json' }, timeout: 20000 });
   const text = res.data?.candidates?.[0]?.content?.parts?.[0]?.text;
   if (!text) throw new Error('Empty Gemini response');
@@ -113,10 +113,21 @@ async function callGeminiChat(history, newMessage, maxTokens = 400) {
 
 // ─── Health ───────────────────────────────────────────────────────
 app.get('/', (_, res) => res.json({
-  service: 'Composite Wall CFD API v3', organization: 'Pentas Insulations Pvt Ltd', version: '3.0.0',
+  service: 'Composite Wall CFD API v3', organization: 'Pentas Insulations Pvt Ltd', version: '3.0.1',
   ai: { provider: 'Google Gemini (FREE)', model: GEMINI_MODEL, enabled: Boolean(GEMINI_API_KEY) },
   freeKeyUrl: 'https://aistudio.google.com/app/apikey',
 }));
+
+// Reset materials to defaults
+app.post('/api/reset', (_, res) => {
+  materialLibrary = [
+    { id: 'mat4', name: 'Material 4', label: 'Cementitious Outer Layer', k: 0.7,   density: 1200, specificHeat: 880,  thickness: 0.5, color: '4289001466' },
+    { id: 'mat1', name: 'Material 1', label: 'Mineral Wool Insulation',  k: 0.1,   density: 160,  specificHeat: 840,  thickness: 25,  color: '4294944565' },
+    { id: 'mat2', name: 'Material 2', label: 'Aerogel Blanket',          k: 0.037, density: 170,  specificHeat: 1000, thickness: 6,   color: '4278225151' },
+    { id: 'mat3', name: 'Material 3', label: 'Cementitious Inner Layer', k: 0.7,   density: 1200, specificHeat: 880,  thickness: 0.5, color: '4294956800' },
+  ];
+  res.json({ success: true, message: 'Materials reset to defaults', materials: materialLibrary });
+});
 
 // ─── Materials ────────────────────────────────────────────────────
 app.get('/api/materials', (_, res) => res.json({ success: true, materials: materialLibrary }));
@@ -186,7 +197,7 @@ app.post('/api/ai/insight', async (req, res) => {
   try {
     const { prompt } = req.body;
     if (!prompt) return res.status(400).json({ success: false, error: 'prompt required' });
-    const insight = await callGemini(prompt, 350);
+    const insight = await callGemini(prompt, 200);
     res.json({ success: true, insight, provider: 'gemini-free' });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message, insight: null });
@@ -213,8 +224,8 @@ app.post('/api/ai/suggest-materials', async (req, res) => {
     const prompt = `Current wall: ${materials.map(m => `${m.name}(k=${m.k},t=${m.thickness}mm)`).join(' | ')}
 BCs: Ts=${boundaryConditions.T_hot}C, T-inf=${boundaryConditions.T_ambient}C, h=${boundaryConditions.h_conv} W/m2K
 Result: q=${result.results.heatFlux_W_per_m2} W/m2, R=${result.results.R_total} m2K/W
-Give 3 specific improvements with expected % gain in R-value. Indian industrial context. Max 200 words.`;
-    const suggestion = await callGemini(prompt, 350);
+Give 2-3 specific improvements with expected % gain in R-value. Max 100 words.`;
+    const suggestion = await callGemini(prompt, 180);
     res.json({ success: true, suggestion, currentResult: result.results, provider: 'gemini-free' });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
@@ -225,11 +236,10 @@ Give 3 specific improvements with expected % gain in R-value. Indian industrial 
 app.post('/api/ai/optimize', async (req, res) => {
   try {
     const { targetFlux = 100, maxThickness = 50, budget = 'medium', temperature = 200 } = req.body;
-    const prompt = `Design optimal composite wall for Pentas Insulations:
-Target: heat flux <= ${targetFlux} W/m2, max thickness ${maxThickness}mm, budget: ${budget}, hot side: ${temperature}C, ambient: 50C, h=4 W/m2K.
-Recommend 2-4 layers with: material name, k (W/mK), thickness (mm), density (kg/m3), reason.
-State: estimated R-value (m2K/W), expected heat flux (W/m2), cost rating. Max 220 words.`;
-    const optimization = await callGemini(prompt, 400);
+    const prompt = `Design optimal composite wall:
+Target: flux <= ${targetFlux} W/m2, thickness <= ${maxThickness}mm, budget: ${budget}, hot: ${temperature}C, ambient: 50C, h=4 W/m2K
+Recommend 2-3 layers (name, k, thickness mm, density). State R-value & expected flux. Max 80 words.`;
+    const optimization = await callGemini(prompt, 180);
     res.json({ success: true, optimization, provider: 'gemini-free' });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
@@ -241,10 +251,10 @@ app.post('/api/ai/explain', async (req, res) => {
   try {
     const { parameter, value, context = '' } = req.body;
     if (!parameter) return res.status(400).json({ success: false, error: 'parameter required' });
-    const prompt = `Explain for an engineer at Pentas Insulations:
+    const prompt = `Explain for an engineer:
 Parameter: ${parameter}, Value: ${value}, Context: ${context}
-What it means physically, if this value is good/bad/typical, and one practical action. Max 120 words.`;
-    const explanation = await callGemini(prompt, 200);
+Physical meaning, if good/bad/typical, one action. Max 80 words.`;
+    const explanation = await callGemini(prompt, 120);
     res.json({ success: true, explanation, provider: 'gemini-free' });
   } catch (e) {
     res.status(500).json({ success: false, error: e.message });
