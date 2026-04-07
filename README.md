@@ -61,5 +61,5 @@ flutter run
 
 ## Key Technologies
 - **Backend**: Express.js, Node.js, Google Gemini AI
-- **Frontend**: Flutter, Dart
+- **Frontend**: Flutter, Dart, Java
 - **Hosting**: Railway (backend)
